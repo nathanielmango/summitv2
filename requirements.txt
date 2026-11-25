@@ -1,0 +1,5 @@
+yt-dlp
+youtube-transcript-api>=1.0.0
+deep-translator
+Pillow
+edge-tts

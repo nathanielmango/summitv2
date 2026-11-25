@@ -1,0 +1,31 @@
+# Python environment and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# PyCharm
+.idea/
+
+# Private files - never publish these
+gemini_key.txt
+tomas_Nikl.mp3
+settings.json
+
+# Output and generated files
+downloads/
+xtts_data/
+last_run_log.txt
+
+# Downloaded tools (people download their own)
+aria2c.exe
+ffmpeg.exe
+deno.exe
+
+# Build output
+build/
+dist/
+*.spec
+
+Output/
+*.exe
