@@ -1,8 +1,9 @@
-; Inno Setup script for Summit. Run build_windows.bat first (it creates dist\Summit).
-; Then open this file in Inno Setup and press Compile (F9) -> Output\SummitSetup.exe
+; Inno Setup script for Summit. Run build_windows.bat first (it creates dist\Summit,
+; and compiles this file for you if Inno Setup 6 is installed).
+; Or open this file in Inno Setup and press Compile (F9) -> Output\SummitSetup.exe
 
 #define AppName "Summit"
-#define AppVersion "1.1"
+#define AppVersion "1.2"
 #define AppPublisher "Nat"
 
 [Setup]

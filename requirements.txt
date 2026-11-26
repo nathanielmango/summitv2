@@ -1,5 +1,13 @@
-yt-dlp
+yt-dlp[default]
 youtube-transcript-api>=1.0.0
 deep-translator
 Pillow
-edge-tts
+
+# Optional: OCR fallback for thumbnails when no Gemini key is used (also needs Tesseract installed)
+pytesseract
+
+# Optional: cleaner text removal on thumbnails
+# opencv-python
+# numpy
+
+# Dubbing is NOT installed here. It runs in a separate environment that has the "TTS" package.

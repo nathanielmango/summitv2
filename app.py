@@ -865,22 +865,131 @@ def translate_thumbnail_ai(orig_path, title, code, gemini, folder, log, progress
 # --------------------------------------------------------------------------- #
 # Gemini translation (natural spoken style)
 # --------------------------------------------------------------------------- #
-STYLE_PROMPT = """You are a professional translator.
-Translate the transcript lines below into natural, fluent, spoken {language}.
+STYLE_PROMPTS = {
+    "cs": """You are a professional translator and voice-over script writer for Czech audio content.
+Translate the transcript lines below into natural, fluent Czech. The result will be read out loud by a Czech text-to-speech voice, so it must sound like a native Czech narrator speaking, not like a written translation.
 
-Style:
-- Do not translate word by word. Rewrite sentences so they sound natural when spoken aloud in {language}.
+RULES:
+Natural spoken Czech
+- Do not translate word by word. Rewrite sentences so they sound natural when spoken in Czech.
 - Use a calm, engaging storytelling tone, like a documentary narrator.
-- Keep the meaning, facts and order of the original. Do not add or remove information (apart from rule 2).
+- Keep the meaning, facts and order of the original. Do not add or remove information.
+Write everything the way it is pronounced in Czech
+- Foreign names and words must be written phonetically, the way a Czech person would pronounce them, so the Czech voice reads them correctly.
+Examples: Shakespeare → Šejkspír, Jesus → Ježíš, Washington → Vošinktn, George → Džordž, Michael → Majkl, Isaac Newton → Ajzek Ňůtn, Nikola Tesla → Nikola Tesla
+- If a name has an established Czech form, use it (Moses → Mojžíš, Egypt → Egypt, John → Jan when it's a biblical name).
+- Numbers and years must be written out in Czech words.
+Examples: 1945 → devatenáct set čtyřicet pět, 3 000 → tři tisíce, 12th century → dvanácté století
+- Write out abbreviations and symbols in full words (e.g. "%" → procent, "km" → kilometrů, "BC" → před naším letopočtem, "Dr." → doktor).
+- Convert units to the ones used in Czech (miles → kilometry, feet → metry, Fahrenheit → stupně Celsia).
+Clean text only
+- No headings, bullet points, asterisks, emojis, timestamps or speaker names.
+- Remove filler and YouTube phrases like "subscribe", "like this video", "link in the description", "comment below".
+- Use normal punctuation so the voice makes natural pauses. Prefer shorter sentences.""",
 
-Rules:
-1. Write everything the way it is pronounced: spell out numbers, symbols and abbreviations as words. No headings, bullet points, asterisks, emojis, timestamps or speaker names.
-2. Remove filler words and YouTube phrases such as "subscribe", "like this video", "link in the description", "comment below". If a whole line is only such a phrase, return an empty string for that line.
-3. Use normal punctuation so the voice makes natural pauses. Prefer shorter sentences.
-4. Keep each translated line about as long, when spoken, as its original line, so it fits the video's timing.
+    "pl": """You are a professional English-to-Polish translator preparing text for voiceover (read by TTS such as ElevenLabs, or by a voice actor). The result must sound as if it were written by a native Polish speaker, never like a translation.
 
-Input: a JSON array of N consecutive transcript lines from one video titled "{title}" (the title is context only, do not translate it).
-Output: a JSON array of exactly N strings, the translation of each line in the same order. Do not merge or split lines. Output only the JSON array."""
+TRANSLATION
+- Do not translate word for word. Translate the meaning, tone and emotion the way a Pole would naturally say it.
+- Replace English idioms with Polish equivalents, or rephrase them.
+- Use natural word order and everyday spoken Polish, not bookish or machine-like language.
+- Split long sentences into shorter ones so they are easy to read aloud without running out of breath.
+- Keep the style of the original (suspenseful, narrative, documentary, etc.).
+- Pay close attention to correct cases, grammatical gender and verb aspect.
+PRONUNCIATION (for voiceover)
+- Write foreign names, titles, brands and English words phonetically using Polish spelling, exactly as they are pronounced. For example:
+Shakespeare → Szekspir, iPhone → ajfon, YouTube → jutub, Washington → Łoszyngton, George → Dżordż, Michael → Majkel, Netflix → Netfliks, CIA → si-aj-ej, FBI → ef-bi-aj
+- If a name has an established Polish form, use it (London → Londyn, Egypt → Egipt, Pharaoh → faraon, Jesus → Jezus).
+- Expand abbreviations or write them the way they are read aloud (USA → ju-es-ej or Stany Zjednoczone, NATO → nato, UFO → ufo).
+NUMBERS AND SYMBOLS → ALWAYS IN WORDS
+- Write every number in words, in the CORRECT case and form for the sentence:
+"in 1945" → "w tysiąc dziewięćset czterdziestym piątym roku"
+"5 people" → "pięć osób", "22 years" → "dwadzieścia dwa lata"
+- Ordinals and Roman numerals in words: XIV century → "czternasty wiek", Louis XVI → "Ludwik Szesnasty"
+- Dates: "March 3, 2020" → "trzeciego marca dwa tysiące dwudziestego roku"
+- Time: "7:30" → "siódma trzydzieści" or "wpół do ósmej"
+- Decimals: "3.5" → "trzy i pół" or "trzy przecinek pięć"
+- Symbols and units in words: % → procent, $ → dolarów, € → euro, & → i, + → plus, km → kilometrów, kg → kilogramów, °C → stopni Celsjusza
+- Expand Polish abbreviations: np. → na przykład, itd. → i tak dalej, ok. → około, tys. → tysięcy, mln → milionów, mld → miliardów, r. → roku, w. → wieku
+- The output must contain NO digits and NO special characters (#, @, /, *, %, $, etc.).
+TEXT FORMAT
+- Clean Polish text, ready to record. No comments, notes, headings or markdown (no **, #, bullet points).
+- Use punctuation to control pauses: comma = short pause, period = longer pause, "…" = dramatic pause. Avoid brackets or quotation marks that cannot be read aloud.
+- Remove filler and YouTube phrases like "subscribe", "like this video", "link in the description", "comment below".
+Before answering, mentally read the text aloud and check that: 1) it sounds natural in Polish, 2) it contains no digits or symbols, 3) all foreign words are written phonetically.""",
+
+    "de": """Du bist ein professioneller Übersetzer und Sprecher-Texter. Übersetze die folgenden englischen Zeilen ins Deutsche. Der Text wird von einer KI-Stimme (Text-to-Speech) als Hörbuch bzw. Video-Narration vorgelesen.
+
+WICHTIGSTE REGELN:
+NATÜRLICHES DEUTSCH
+- Übersetze nicht wörtlich. Schreibe so, wie ein deutscher Muttersprachler erzählen würde – flüssig, lebendig, spannend.
+- Passe Satzbau, Redewendungen und Bilder an die deutsche Sprache an. Keine englischen Satzkonstruktionen.
+- Sprich den Hörer mit "du" an (nicht "Sie"), außer im Original ist es eindeutig formell.
+- Ton: wie ein fesselnder Erzähler einer Dokumentation, nicht wie ein Schulbuch.
+ZAHLEN IMMER AUSSCHREIBEN
+- Alle Zahlen als Wörter: "1650" → "eintausendsechshundertfünfzig", "20 000" → "zwanzigtausend".
+- Jahreszahlen so, wie man sie spricht: "1847" → "achtzehnhundertsiebenundvierzig", "2003" → "zweitausenddrei".
+- "3000 BC" → "dreitausend vor Christus", "AD 79" → "neunundsiebzig nach Christus".
+- Ordinalzahlen ausschreiben: "19th century" → "neunzehnten Jahrhundert", "1st" → "erste".
+- Dezimalzahlen: "2.5" → "zweieinhalb" oder "zwei Komma fünf".
+- Brüche: "1/3" → "ein Drittel".
+ZEICHEN, EINHEITEN UND ABKÜRZUNGEN AUSSCHREIBEN
+- "%" → "Prozent", "°C" → "Grad Celsius", "&" → "und", "+" → "plus", "€" → "Euro", "$" → "Dollar".
+- Einheiten: "km" → "Kilometer", "m" → "Meter", "kg" → "Kilogramm", "t" → "Tonnen", "mm" → "Millimeter".
+- Imperiale Einheiten in metrische umrechnen und ausschreiben: "10 feet" → "etwa drei Meter", "5 miles" → "etwa acht Kilometer", "100 pounds" → "etwa fünfundvierzig Kilogramm".
+- Abkürzungen auflösen: "z. B." → "zum Beispiel", "ca." → "circa", "Dr." → "Doktor", "St." → "Sankt", "USA" → "U-S-A" nur wenn nötig, sonst "die Vereinigten Staaten".
+- Keine Klammern, Schrägstriche, Bindestrich-Aufzählungen oder Sonderzeichen, die eine Stimme nicht vorlesen kann. Formuliere sie in ganze Sätze um.
+AUSSPRACHE FÜR FREMDE NAMEN
+- Englische und andere fremde Namen, die eine deutsche KI-Stimme falsch aussprechen würde, phonetisch auf Deutsch schreiben: "John" → "Dschon", "Washington" → "Woschington", "Jamestown" → "Dschejmstaun", "Smithsonian" → "Smissounien".
+- Bekannte Namen, die im Deutschen eine eigene Form haben, in der deutschen Form verwenden: "Egypt" → "Ägypten", "Stonehenge" bleibt "Stonehenge" (in Deutschland bekannt), "Cairo" → "Kairo".
+- Im Zweifel: Schreibe es so, wie ein Deutscher es aussprechen würde, damit die Stimme es richtig liest.
+WEBSEITEN
+- Domains so schreiben, wie sie gesprochen werden: "steinelugennicht.com" → "steine lügen nicht punkt com".
+FORMAT
+- Keine Erklärungen, keine Anmerkungen, keine Überschriften, keine Regieanweisungen, keine Aufzählungszeichen.
+- Entferne Füllwörter und YouTube-Floskeln wie "abonniere den Kanal", "gefällt dir das Video", "Link in der Beschreibung", "schreib einen Kommentar".
+- Alle anderen Fakten, Zahlen und Namen müssen erhalten bleiben.""",
+
+    "es": """You are a professional translator and voice-over script writer for Spanish audio content.
+Translate the transcript lines below into natural, fluent Spanish. The result will be read out loud by a Spanish text-to-speech voice, so it must sound like a native Spanish narrator speaking, not like a written translation. Use neutral Spanish that works for all Spanish-speaking audiences, avoiding regional slang.
+
+RULES:
+Natural spoken Spanish
+- Do not translate word by word. Rewrite sentences so they sound natural when spoken in Spanish.
+- Use a calm, engaging storytelling tone, like a documentary narrator.
+- Keep the meaning, facts and order of the original. Do not add or remove information.
+- Replace English idioms with natural Spanish equivalents.
+Write everything the way it is pronounced in Spanish
+- Foreign names and words must be written phonetically, the way a Spanish speaker would pronounce them, so the Spanish voice reads them correctly.
+Examples: Shakespeare → Séspir, Washington → Guóshington, George → Yorch, Michael → Máikel, Isaac Newton → Áisac Niúton, Nikola Tesla → Nikola Tesla
+- If a name has an established Spanish form, use it (Moses → Moisés, Egypt → Egipto, Jesus → Jesús, John → Juan when it's a biblical name, London → Londres).
+- Numbers and years must be written out in Spanish words.
+Examples: 1945 → mil novecientos cuarenta y cinco, 3,000 → tres mil, 12th century → siglo doce
+- Write out abbreviations and symbols in full words (e.g. "%" → por ciento, "km" → kilómetros, "BC" → antes de Cristo, "AD" → después de Cristo, "Dr." → doctor, "$" → dólares, "&" → y).
+- Convert units to the metric units used in Spanish (miles → kilómetros, feet → metros, pounds → kilogramos, Fahrenheit → grados Celsius).
+Clean text only
+- No headings, bullet points, asterisks, emojis, timestamps or speaker names.
+- Remove filler and YouTube phrases like "subscribe", "like this video", "link in the description", "comment below".
+- Use normal punctuation so the voice makes natural pauses. Prefer shorter sentences.
+- No digits, brackets, slashes or special characters that a voice cannot read aloud.""",
+}
+
+# Added to every language prompt: how the app sends lines and wants them back.
+PROMPT_IO = """
+
+HOW THE TEXT IS SENT (this overrides any instruction above about output format):
+- Input: a JSON array of N consecutive transcript lines from one video titled "{title}" (the title is context only, do not translate it).
+- Output: a JSON array of exactly N strings, the translation of each line in the same order. Do not merge or split lines. Output only the JSON array, no notes or explanations.
+- Translate every line, never summarize or shorten. If a whole line is only a YouTube phrase (subscribe, like, link below), return an empty string for that line.
+- Keep each translated line about as long, when spoken, as its original line, so it fits the video's timing.
+- Use the same spelling for the same name in every line."""
+
+
+def build_style_prompt(code, title):
+    base = STYLE_PROMPTS.get(code) or (
+        "You are a professional translator. Translate the transcript lines into natural, "
+        f"fluent, spoken {LANG_NAMES.get(code, code)}. Spell out numbers and symbols as words.")
+    return (base + PROMPT_IO).replace("{title}", title or "")
 
 
 class GeminiError(Exception):
@@ -953,8 +1062,7 @@ def _gemini_call(key, model, prompt, lines, log=None, tries=4):
 def translate_with_gemini(texts, target_code, key, models, title, log,
                           max_lines=80, max_chars=6000, progress=None, workers=3):
     """Big batches, several sent at the same time (a few requests instead of many)."""
-    prompt = STYLE_PROMPT.format(language=LANG_NAMES.get(target_code, target_code),
-                                 title=title or "")
+    prompt = build_style_prompt(target_code, title)
     out = [None] * len(texts)
     state = {"model": 0, "done": 0, "stop": False}
     lock = threading.Lock()
@@ -1557,7 +1665,7 @@ class SummitApp(tk.Tk):
         self.after(100, self.poll)
         self.after(300, self._watch_url)
         self.after(60, self._fit_height)
-        self.after(120, self._fade_in)
+        self.after(320, self._fade_in)  # after the taskbar fix has re-shown the window
         self.after(1500, self._show_fully)  # safety net: never stay see-through
 
     def _fade_in(self, a=0.0):
@@ -1597,18 +1705,96 @@ class SummitApp(tk.Tk):
         try:
             self.overrideredirect(True)
             if IS_WIN:
-                self.after(10, self._apply_win32_taskbar)
+                self._taskbar_tries = 0
+                # wait until the window is really on screen, then add the taskbar flag
+                self.after(200, self._apply_win32_taskbar)
         except Exception:
             pass
 
+    def _win32_hwnd(self):
+        user32 = ctypes.windll.user32
+        user32.GetParent.restype = ctypes.c_void_p
+        user32.GetParent.argtypes = [ctypes.c_void_p]
+        self.update_idletasks()
+        return user32.GetParent(self.winfo_id()) or self.winfo_id()
+
     def _apply_win32_taskbar(self):
+        """Give the frameless window a taskbar button and an Alt+Tab entry."""
         try:
-            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            style = ctypes.windll.user32.GetWindowLongW(hwnd, -20)  # GWL_EXSTYLE
+            user32 = ctypes.windll.user32
+            user32.GetWindowLongW.argtypes = [ctypes.c_void_p, ctypes.c_int]
+            user32.SetWindowLongW.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_long]
+            user32.SetWindowPos.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int,
+                                            ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                                            ctypes.c_uint]
+            hwnd = self._win32_hwnd()
+            style = user32.GetWindowLongW(hwnd, -20)  # GWL_EXSTYLE
             style = (style & ~0x00000080) | 0x00040000  # drop TOOLWINDOW, add APPWINDOW
-            ctypes.windll.user32.SetWindowLongW(hwnd, -20, style)
-            self.withdraw()
-            self.after(10, self.deiconify)
+            user32.SetWindowLongW(hwnd, -20, style)
+            # NOSIZE | NOMOVE | NOZORDER | NOACTIVATE | FRAMECHANGED
+            user32.SetWindowPos(hwnd, None, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020)
+            self.withdraw()  # Windows only re-reads the flag when the window is shown again
+            self.after(40, self._after_taskbar_apply)
+        except Exception:
+            try:
+                self.deiconify()
+            except Exception:
+                pass
+
+    def _icon_file(self):
+        """summit.ico if present, otherwise one made from summit.png."""
+        if os.path.exists(ICON_ICO):
+            return ICON_ICO
+        if os.path.exists(ICON_PNG) and Image is not None:
+            try:
+                import tempfile
+                path = os.path.join(tempfile.gettempdir(), "summit_icon.ico")
+                Image.open(ICON_PNG).convert("RGBA").save(
+                    path, format="ICO", sizes=[(16, 16), (32, 32), (48, 48), (256, 256)])
+                return path
+            except Exception:
+                pass
+        return None
+
+    def _apply_win32_icon(self):
+        """Putting the icon on the window itself; Tk loses it when the window is rebuilt."""
+        try:
+            path = self._icon_file()
+            if not path:
+                return
+            user32 = ctypes.windll.user32
+            user32.LoadImageW.restype = ctypes.c_void_p
+            user32.LoadImageW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_uint,
+                                          ctypes.c_int, ctypes.c_int, ctypes.c_uint]
+            user32.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint,
+                                            ctypes.c_void_p, ctypes.c_void_p]
+            hwnd = self._win32_hwnd()
+            # IMAGE_ICON = 1, LR_LOADFROMFILE = 0x10; WM_SETICON = 0x80 (1 = big, 0 = small)
+            big = user32.LoadImageW(None, path, 1, 32, 32, 0x10)
+            small = user32.LoadImageW(None, path, 1, 16, 16, 0x10)
+            if big:
+                user32.SendMessageW(hwnd, 0x80, 1, big)
+            if small:
+                user32.SendMessageW(hwnd, 0x80, 0, small)
+        except Exception:
+            pass
+
+    def _after_taskbar_apply(self):
+        try:
+            self.deiconify()
+            self._apply_win32_icon()
+            self.after(400, self._check_win32_taskbar)
+        except Exception:
+            pass
+
+    def _check_win32_taskbar(self):
+        """Tk can reset the flag when it re-creates the window, so check and retry."""
+        try:
+            user32 = ctypes.windll.user32
+            hwnd = self._win32_hwnd()
+            if not (user32.GetWindowLongW(hwnd, -20) & 0x00040000) and self._taskbar_tries < 3:
+                self._taskbar_tries += 1
+                self._apply_win32_taskbar()
         except Exception:
             pass
 
@@ -1616,15 +1802,18 @@ class SummitApp(tk.Tk):
         try:
             self.overrideredirect(False)
             self.iconify()
-            self.bind("", self._restore_from_iconify)
+            self.bind("<Map>", self._restore_from_iconify)
         except Exception:
             self.iconify()
 
-    def _restore_from_iconify(self, _=None):
-        self.unbind("")
+    def _restore_from_iconify(self, event=None):
+        if event is not None and event.widget is not self:
+            return  # a child widget was mapped, not the window itself
+        self.unbind("<Map>")
         self.overrideredirect(True)
         if IS_WIN:
-            self.after(10, self._apply_win32_taskbar)
+            self._taskbar_tries = 0
+            self.after(30, self._apply_win32_taskbar)
 
     def _toggle_maximize(self):
         if not self._is_maximized:

@@ -1,6 +1,7 @@
 @echo off
 setlocal
-REM Builds Summit.exe. Run this on Windows, in the folder that holds app.py.
+REM Builds Summit.exe and, if Inno Setup is installed, the installer too.
+REM Run this on Windows, in the folder that holds app.py.
 REM Needs Python 3.9+ installed (tick "Add Python to PATH" in the installer).
 REM
 REM Put these next to app.py before building (all optional except app.py + xtts_worker.py):
@@ -8,6 +9,7 @@ REM   summit.ico, summit.png   window / taskbar / toast icon
 REM   tomas_Nikl.mp3           the voice used for dubbing
 REM   ffmpeg.exe               otherwise it is copied from your PATH
 REM   aria2c.exe               optional, makes video downloads faster
+REM   Summit.iss               makes the installer (needs Inno Setup 6)
 
 cd /d "%~dp0"
 
@@ -19,6 +21,8 @@ python -m pip install --upgrade "yt-dlp[default]" "youtube-transcript-api>=1.0.0
 
 set ICON=
 if exist summit.ico set ICON=--icon summit.ico
+if not exist summit.ico echo WARNING: summit.ico not found - Summit.exe will have a default icon.
+if not exist summit.png echo WARNING: summit.png not found - the window and taskbar logo will be missing.
 
 REM yt-dlp's YouTube helper package (only bundled if it is installed)
 set EXTRA=
@@ -48,10 +52,28 @@ REM aria2c is optional: with it the app downloads videos with 16 connections
 if exist aria2c.exe copy /y aria2c.exe dist\Summit\ >nul
 if not exist dist\Summit\aria2c.exe for /f "delims=" %%i in ('where aria2c 2^>nul') do copy /y "%%i" dist\Summit\ >nul
 
+REM ---- installer (only if Inno Setup is installed and Summit.iss is here) ----
+set ISCC=
+if exist "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" set "ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
+if exist "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
+if exist "%ProgramFiles%\Inno Setup 6\ISCC.exe" set "ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe"
+if not defined ISCC goto :no_installer
+if not exist Summit.iss goto :no_installer
+
+echo.
+echo Making the installer...
+"%ISCC%" Summit.iss || goto :error
+echo.
+echo Done. The installer is  Output\SummitSetup.exe
+echo The plain app folder is  dist\Summit
+goto :finish
+
+:no_installer
 echo.
 echo Done. The app is in  dist\Summit  (run Summit.exe inside it).
-echo To make the installer, open Summit.iss in Inno Setup and press Compile (F9).
-echo Or just zip the folder dist\Summit and send it.
+echo To make the installer, open Summit.iss in Inno Setup and press Compile F9.
+
+:finish
 echo.
 echo Reminder: the XTTS voice engine (the separate Python with TTS installed) is NOT
 echo bundled. On each computer, set the "XTTS Python" box in the app's settings.
